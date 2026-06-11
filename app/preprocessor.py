@@ -1,32 +1,36 @@
 import re
 import string
 import nltk
-from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
-# Download required NLTK data at module load
+# Download only what we actually need — no punkt/punkt_tab dependency
+# We use regex tokenization instead of word_tokenize to avoid NLTK punkt issues
 try:
-    nltk.data.find('tokenizers/punkt')
-    nltk.data.find('tokenizers/punkt_tab')
     nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('stopwords', quiet=True)
+
+try:
     nltk.data.find('corpora/wordnet')
 except LookupError:
-    nltk.download('punkt', quiet=True)
-    nltk.download('punkt_tab', quiet=True)
-    nltk.download('stopwords', quiet=True)
     nltk.download('wordnet', quiet=True)
+    nltk.download('omw-1.4', quiet=True)
+
 
 class TextPreprocessor:
     """
     A comprehensive text preprocessor for NLP tasks.
+    Uses regex tokenization (no NLTK punkt dependency) for maximum compatibility.
     Supports lowercasing, punctuation removal, URL stripping,
-    tokenization, stopword removal, and lemmatization.
+    stopword removal, and lemmatization.
     """
 
     def __init__(self):
         self.lemmatizer = WordNetLemmatizer()
         self.stop_words = set(stopwords.words('english'))
+        # Regex to extract alphabetic tokens only — fast and punkt-free
+        self._token_pattern = re.compile(r'[a-z]+')
 
     def strip_urls(self, text: str) -> str:
         """Removes URLs from text."""
@@ -41,8 +45,8 @@ class TextPreprocessor:
         return text.translate(str.maketrans('', '', string.punctuation))
 
     def tokenize(self, text: str) -> list:
-        """Tokenizes text using NLTK."""
-        return word_tokenize(text)
+        """Tokenizes text using regex — no NLTK punkt required."""
+        return self._token_pattern.findall(text)
 
     def remove_stopwords(self, tokens: list) -> list:
         """Removes stopwords from a list of tokens."""
@@ -59,16 +63,17 @@ class TextPreprocessor:
         """
         if not isinstance(text, str):
             return ""
-            
+
         text = self.strip_urls(text)
         text = self.lowercase(text)
         text = self.remove_punctuation(text)
-        
+
         tokens = self.tokenize(text)
         tokens = self.remove_stopwords(tokens)
         tokens = self.lemmatize(tokens)
-        
+
         return " ".join(tokens)
+
 
 # Global instance for easy importing
 preprocessor = TextPreprocessor()
