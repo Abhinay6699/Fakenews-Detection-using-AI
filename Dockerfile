@@ -19,25 +19,26 @@ COPY requirements.txt /app/
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Pre-download NLTK data required by the preprocessor
-RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet')"
+RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet'); nltk.download('punkt_tab')"
 
-# Print versions for debugging
-RUN python -c "import sklearn, numpy, tensorflow; print(f'sklearn={sklearn.__version__} numpy={numpy.__version__} tf={tensorflow.__version__}')"
-
-# Copy project
+# Copy project source (models dir will be populated by training below)
 COPY . /app/
 
-# Validate models load correctly at build time
+# Train the model at build time so pkl files are always compatible
+# with the exact library versions installed above
+RUN python train/train.py
+
+# Verify models were created successfully
 RUN python -c "\
-import pickle, sys; \
+import pickle; \
 v = pickle.load(open('models/tfidf_vectorizer.pkl','rb')); \
 result = v.transform(['test']); \
-print(f'Vectorizer OK — vocab size: {len(v.vocabulary_)}, shape: {result.shape}'); \
+print(f'[BUILD OK] Vectorizer vocab size: {len(v.vocabulary_)}'); \
 m = pickle.load(open('models/best_model.pkl','rb')); \
-print(f'Model OK — type: {type(m).__name__}')"
+print(f'[BUILD OK] Model type: {type(m).__name__}')"
 
 # Expose port
 EXPOSE 5000
 
-# Command to run the application using Gunicorn
+# Run with Gunicorn — 1 worker to keep memory within free tier limits
 CMD gunicorn --bind 0.0.0.0:$PORT --timeout 120 --workers 1 run:app

@@ -11,5 +11,9 @@ env/
 .env
 .git/
 .gitignore
-tests/
-train/data/
+
+# Exclude pre-trained artifacts — Docker will train fresh ones
+# that are guaranteed compatible with the installed library versions
+models/best_model.pkl
+models/tfidf_vectorizer.pkl
+models/tokenizer.pkl
