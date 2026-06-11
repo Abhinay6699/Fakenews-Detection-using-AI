@@ -21,11 +21,23 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Pre-download NLTK data required by the preprocessor
 RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet')"
 
+# Print versions for debugging
+RUN python -c "import sklearn, numpy, tensorflow; print(f'sklearn={sklearn.__version__} numpy={numpy.__version__} tf={tensorflow.__version__}')"
+
 # Copy project
 COPY . /app/
+
+# Validate models load correctly at build time
+RUN python -c "\
+import pickle, sys; \
+v = pickle.load(open('models/tfidf_vectorizer.pkl','rb')); \
+result = v.transform(['test']); \
+print(f'Vectorizer OK — vocab size: {len(v.vocabulary_)}, shape: {result.shape}'); \
+m = pickle.load(open('models/best_model.pkl','rb')); \
+print(f'Model OK — type: {type(m).__name__}')"
 
 # Expose port
 EXPOSE 5000
 
 # Command to run the application using Gunicorn
-CMD gunicorn --bind 0.0.0.0:$PORT run:app
+CMD gunicorn --bind 0.0.0.0:$PORT --timeout 120 --workers 1 run:app

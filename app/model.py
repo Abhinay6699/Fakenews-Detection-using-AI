@@ -35,8 +35,17 @@ class FakeNewsModel:
         # Load vectorizer
         vectorizer_path = os.path.join(models_dir, 'tfidf_vectorizer.pkl')
         if os.path.exists(vectorizer_path):
-            with open(vectorizer_path, 'rb') as f:
-                self.vectorizer = pickle.load(f)
+            try:
+                with open(vectorizer_path, 'rb') as f:
+                    self.vectorizer = pickle.load(f)
+                # Validate the vectorizer is actually fitted
+                _ = self.vectorizer.transform(["test validation"])
+                logger.info(f"TF-IDF vectorizer loaded and validated. Vocab size: {len(self.vectorizer.vocabulary_)}")
+            except Exception as e:
+                logger.error(f"CRITICAL: TF-IDF vectorizer failed validation: {type(e).__name__}: {e}")
+                self.vectorizer = None
+        else:
+            logger.error(f"CRITICAL: tfidf_vectorizer.pkl not found at {vectorizer_path}")
         
         # Try loading a scikit-learn model first
         sklearn_model_path = os.path.join(models_dir, 'best_model.pkl')
@@ -86,6 +95,8 @@ class FakeNewsModel:
             confidence = float(prob) if prob > 0.5 else float(1 - prob)
             label = "FAKE" if prob > 0.5 else "REAL"
         else:
+            if self.vectorizer is None:
+                raise ValueError("TF-IDF vectorizer is not loaded. The model artifacts may be corrupted. Please retrain.")
             features = self.vectorizer.transform([processed_text])
             prediction = self.model.predict(features)[0]
             label = "FAKE" if prediction == 1 else "REAL"
