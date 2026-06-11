@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TruthLens | Fake News Detection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface-color: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --fake-color: #ef4444;
+            --real-color: #10b981;
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .container {
+            background-color: var(--surface-color);
+            width: 100%;
+            max-width: 800px;
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: var(--text-primary);
+            padding: 1rem;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            resize: vertical;
+            margin-bottom: 1.5rem;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn:disabled {
+            background-color: #475569;
+            cursor: not-allowed;
+        }
+
+        .result-panel {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 8px;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .verdict-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .verdict-badge {
+            font-size: 1.5rem;
+            font-weight: 700;
+            padding: 0.25rem 1rem;
+            border-radius: 9999px;
+            letter-spacing: 0.05em;
+        }
+
+        .verdict-FAKE {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: var(--fake-color);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+
+        .verdict-REAL {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: var(--real-color);
+            border: 1px solid rgba(16, 185, 129, 0.5);
+        }
+
+        .confidence-section {
+            margin-bottom: 1rem;
+        }
+
+        .confidence-label {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bg {
+            height: 12px;
+            background-color: #334155;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            border-radius: 9999px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .progress-FAKE { background-color: var(--fake-color); }
+        .progress-REAL { background-color: var(--real-color); }
+
+        .model-info {
+            font-size: 0.8rem;
+            color: #64748b;
+            text-align: right;
+            border-top: 1px solid #334155;
+            padding-top: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .loader {
+            display: none;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top: 3px solid var(--accent-color);
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-msg {
+            color: var(--fake-color);
+            margin-top: 1rem;
+            text-align: center;
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>TruthLens</h1>
+        <p>Advanced NLP-driven Fake News Classifier</p>
+    </header>
+
+    <div class="container">
+        <textarea id="news-text" placeholder="Paste the news article or headline here to analyze its authenticity..."></textarea>
+        
+        <button id="analyze-btn" class="btn">
+            <span id="btn-text">Analyze Content</span>
+            <div id="btn-loader" class="loader"></div>
+        </button>
+
+        <div id="error-message" class="error-msg"></div>
+
+        <div id="result-panel" class="result-panel">
+            <div class="verdict-header">
+                <span style="color: var(--text-secondary); font-weight: 500;">Verdict</span>
+                <div id="verdict-badge" class="verdict-badge"></div>
+            </div>
+            
+            <div class="confidence-section">
+                <div class="confidence-label">
+                    <span>Confidence Score</span>
+                    <span id="confidence-val">0%</span>
+                </div>
+                <div class="progress-bg">
+                    <div id="progress-bar" class="progress-bar"></div>
+                </div>
+            </div>
+
+            <div class="model-info">
+                Model: <span id="model-name">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('analyze-btn').addEventListener('click', async () => {
+            const text = document.getElementById('news-text').value;
+            const btn = document.getElementById('analyze-btn');
+            const btnText = document.getElementById('btn-text');
+            const btnLoader = document.getElementById('btn-loader');
+            const resultPanel = document.getElementById('result-panel');
+            const errorMsg = document.getElementById('error-message');
+            
+            if (!text.trim()) {
+                errorMsg.textContent = "Please enter some text to analyze.";
+                errorMsg.style.display = "block";
+                resultPanel.style.display = "none";
+                return;
+            }
+
+            // Reset UI
+            errorMsg.style.display = "none";
+            btn.disabled = true;
+            btnText.style.display = "none";
+            btnLoader.style.display = "block";
+            resultPanel.style.display = "none";
+            
+            // Reset Progress Bar Animation
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.style.width = '0%';
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Something went wrong.");
+                }
+
+                // Update UI with results
+                const verdictBadge = document.getElementById('verdict-badge');
+                const confidenceVal = document.getElementById('confidence-val');
+                const modelName = document.getElementById('model-name');
+
+                const isFake = data.label === 'FAKE';
+                const confidencePct = (data.confidence * 100).toFixed(1);
+
+                verdictBadge.textContent = data.label;
+                verdictBadge.className = `verdict-badge verdict-${data.label}`;
+                
+                confidenceVal.textContent = `${confidencePct}%`;
+                modelName.textContent = data.model_used;
+
+                progressBar.className = `progress-bar progress-${data.label}`;
+                
+                resultPanel.style.display = "block";
+                
+                // Trigger animation by setting width after display block
+                setTimeout(() => {
+                    progressBar.style.width = `${confidencePct}%`;
+                }, 50);
+
+            } catch (err) {
+                errorMsg.textContent = err.message;
+                errorMsg.style.display = "block";
+            } finally {
+                btn.disabled = false;
+                btnText.style.display = "block";
+                btnLoader.style.display = "none";
+            }
+        });
+    </script>
+</body>
+</html>
