@@ -91,8 +91,35 @@ Run the test suite using `pytest`:
 pytest tests/
 ```
 
+## Deployment (Render)
+
+This application is ready to be deployed on platforms like **Render**, which supports heavy ML backend applications via Docker. 
+
+**Vercel / Netlify Note**: While great for static sites or serverless functions, Vercel and Netlify have strict size limits for serverless functions (typically 50MB to 250MB). Because this application uses TensorFlow and scikit-learn, the dependencies exceed those limits. Render provides a seamless alternative for deploying Docker-based applications.
+
+### Deploying to Render
+1. Create a free account on [Render](https://render.com/).
+2. Click **New +** and select **Blueprint**.
+3. Connect your GitHub repository.
+4. Render will automatically detect the `render.yaml` file and configure a Web Service using the provided `Dockerfile`.
+5. Click **Apply** to deploy.
+
+*Note: The free tier may spin down after inactivity and take up to 50 seconds to spin back up on the next request.*
+
+### Deploying locally using Docker
+You can also run the application locally using Docker:
+```bash
+# Build the image
+docker build -t fake-news-detector .
+
+# Run the container
+docker run -p 5000:5000 fake-news-detector
+```
+
 ## Project Structure
 - `app/`: Flask application, UI templates, and prediction logic.
 - `train/`: Scripts for data fetching, model training, and evaluation.
 - `models/`: Persistent storage for trained `.pkl` and `.h5` model artifacts.
 - `tests/`: Pytest suite for unit and integration testing.
+- `Dockerfile` & `render.yaml`: Configuration files for containerization and Render deployment.
+

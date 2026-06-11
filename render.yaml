@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: fake-news-detector
+    env: docker
+    region: ohio
+    plan: free
+    dockerCommand: "gunicorn --bind 0.0.0.0:$PORT run:app"
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 5000
