@@ -95,11 +95,8 @@ class ModelTrainer:
         loader = DataLoader()
         df = loader.load_data()
 
-        # Sample for faster training inside Docker
-        sample_size = 6000 if not ENABLE_BILSTM else 10000
-        if len(df) > sample_size:
-            logger.info(f"Sampling {sample_size} records for faster training...")
-            df = df.sample(n=sample_size, random_state=self.random_state)
+        # Use full dataset for best accuracy (LR + GBT handle it fine)
+        logger.info(f"Training on {len(df)} records (full dataset).")
 
         X_train, X_test, y_train, y_test = self.prepare_data(df)
 

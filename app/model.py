@@ -77,9 +77,13 @@ class FakeNewsModel:
         else:
             logger.warning("No trained model found. Please run train/train.py first.")
 
+    # Confidence threshold — below this the model reports UNCERTAIN
+    UNCERTAIN_THRESHOLD = 0.70
+
     def predict(self, text: str) -> dict:
         """
         Predicts whether the given text is FAKE or REAL.
+        Returns UNCERTAIN when confidence is below the threshold.
         Returns a dictionary with label, confidence, and model_used.
         """
         if self.model is None:
@@ -90,26 +94,35 @@ class FakeNewsModel:
         if self.is_dl:
             from tensorflow.keras.preprocessing.sequence import pad_sequences
             seq = self.tokenizer.texts_to_sequences([processed_text])
-            pad_seq = pad_sequences(seq, maxlen=500) # Assuming maxlen=500 from train
-            prob = self.model.predict(pad_seq)[0][0]
-            confidence = float(prob) if prob > 0.5 else float(1 - prob)
-            label = "FAKE" if prob > 0.5 else "REAL"
+            pad_seq = pad_sequences(seq, maxlen=500)
+            fake_prob = float(self.model.predict(pad_seq)[0][0])
         else:
             if self.vectorizer is None:
                 raise ValueError("TF-IDF vectorizer is not loaded. The model artifacts may be corrupted. Please retrain.")
             features = self.vectorizer.transform([processed_text])
-            prediction = self.model.predict(features)[0]
-            label = "FAKE" if prediction == 1 else "REAL"
             
             if hasattr(self.model, "predict_proba"):
                 probs = self.model.predict_proba(features)[0]
-                confidence = float(max(probs))
+                # probs[0] = P(REAL), probs[1] = P(FAKE)
+                fake_prob = float(probs[1])
             else:
-                confidence = 1.0 # Fallback
+                prediction = self.model.predict(features)[0]
+                fake_prob = 1.0 if prediction == 1 else 0.0
+
+        # Determine label based on probability and confidence threshold
+        confidence = max(fake_prob, 1.0 - fake_prob)
+
+        if confidence < self.UNCERTAIN_THRESHOLD:
+            label = "UNCERTAIN"
+        elif fake_prob > 0.5:
+            label = "FAKE"
+        else:
+            label = "REAL"
                 
         return {
             "label": label,
             "confidence": round(confidence, 4),
+            "fake_probability": round(fake_prob, 4),
             "model_used": self.model_name
         }
 

@@ -455,6 +455,7 @@
 
         .verdict-accent.fake { background: var(--red); }
         .verdict-accent.real { background: var(--green); }
+        .verdict-accent.uncertain { background: var(--yellow); }
 
         .verdict-body {
             flex: 1;
@@ -486,6 +487,7 @@
 
         .verdict-tag.fake { color: var(--red); }
         .verdict-tag.real { color: var(--green); }
+        .verdict-tag.uncertain { color: var(--yellow); }
 
         .verdict-icon {
             font-size: 2.5rem;
@@ -541,6 +543,11 @@
         #meter-fill.real {
             background: var(--green);
             box-shadow: 0 0 10px rgba(0, 230, 118, 0.5);
+        }
+
+        #meter-fill.uncertain {
+            background: var(--yellow);
+            box-shadow: 0 0 10px rgba(255, 214, 0, 0.5);
         }
 
         /* ─── BREAKDOWN ─── */
@@ -911,14 +918,24 @@
     });
 
     function renderResult(data, elapsed) {
-        const isFake   = data.label === 'FAKE';
-        const pct      = (data.confidence * 100).toFixed(1);
-        const cls      = isFake ? 'fake' : 'real';
+        const pct = (data.confidence * 100).toFixed(1);
+        const fakePct = data.fake_probability !== undefined
+            ? (data.fake_probability * 100).toFixed(1)
+            : pct;
+
+        // Map label to CSS class
+        let cls, icon;
+        switch (data.label) {
+            case 'FAKE':      cls = 'fake';      icon = '🚨'; break;
+            case 'REAL':      cls = 'real';      icon = '✅'; break;
+            case 'UNCERTAIN': cls = 'uncertain'; icon = '⚠️'; break;
+            default:          cls = 'uncertain'; icon = '❓'; break;
+        }
 
         // Verdict tag
         document.getElementById('verdict-tag').textContent = data.label;
         document.getElementById('verdict-tag').className   = `verdict-tag ${cls}`;
-        document.getElementById('verdict-icon').textContent = isFake ? '🚨' : '✅';
+        document.getElementById('verdict-icon').textContent = icon;
         document.getElementById('verdict-accent').className = `verdict-accent ${cls}`;
 
         // Confidence
@@ -929,7 +946,7 @@
 
         // Breakdown
         document.getElementById('bd-label').textContent = data.label;
-        document.getElementById('bd-score').textContent = `${pct}%`;
+        document.getElementById('bd-score').textContent = `${fakePct}% fake probability`;
         document.getElementById('bd-model').textContent = (data.model_used || '—').replace(/_/g, ' ');
         document.getElementById('result-time').textContent = `Analyzed in ${elapsed}s`;
 
