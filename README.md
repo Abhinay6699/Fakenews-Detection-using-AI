@@ -1,4 +1,3 @@
----
 # TruthLens — Fake News Detection System
 
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)
@@ -50,7 +49,7 @@ NLTK Pipeline (URL strip → lowercase → lemmatize → stop word removal)
 | Gradient Boosting | Competitive | Ensemble on TF-IDF |
 | BiLSTM | Best (typically) | Deep sequential model |
 
-Best model is automatically selected and saved to `models/best_model.pkl` or `.h5`.
+Best model is automatically selected and saved to models/best_model.pkl or .h5.
 
 ---
 
@@ -66,50 +65,32 @@ Best model is automatically selected and saved to `models/best_model.pkl` or `.h
 
 ## API
 
-**GET /health**
-```json
-{ "status": "ok", "model_loaded": true, "model_name": "LogisticRegression" }
-```
+GET /health
+Response: { "status": "ok", "model_loaded": true, "model_name": "LogisticRegression" }
 
-**POST /predict**
-```json
-// Request
-{ "text": "Your article text here..." }
-
-// Response
-{ "label": "FAKE", "confidence": 0.9421, "model_used": "LogisticRegression" }
-```
+POST /predict
+Request body: { "text": "Your article text here..." }
+Response: { "label": "FAKE", "confidence": 0.9421, "model_used": "LogisticRegression" }
 
 ---
 
 ## Quickstart
 
-```bash
-# Install dependencies
 pip install -r requirements.txt
-
-# Train models (downloads dataset, trains all 3, saves best)
 python train/train.py
-
-# Run API server
 python run.py
-# → http://localhost:5000
-```
+Server runs at http://localhost:5000
 
-**Docker:**
-```bash
+Docker:
 docker build -t fake-news-detector .
 docker run -p 5000:5000 fake-news-detector
-```
 
-**Deploy to Render:**
-Repository includes `render.yaml` for one-click Render deployment. Connect your GitHub repo → Render detects config automatically.
+Deploy to Render: Repository includes render.yaml for one-click deployment. Connect GitHub repo, Render detects config automatically.
 
 ---
 
 ## Project Structure
 
-```
 Fakenews-Detection-using-AI/
 ├── app/          # Flask application, UI templates, prediction logic
 ├── train/        # Data fetching, model training, evaluation scripts
@@ -119,23 +100,19 @@ Fakenews-Detection-using-AI/
 ├── Dockerfile
 ├── render.yaml
 └── requirements.txt
-```
 
 ---
 
 ## Run Tests
 
-```bash
 pytest tests/
-```
 
 ---
 
 ## Tech Stack
 
-- **NLP**: NLTK, SpaCy, TF-IDF (sklearn), Keras Tokenizer
-- **Models**: Logistic Regression, Gradient Boosting, BiLSTM (TensorFlow/Keras)
-- **API**: Flask
-- **Frontend**: Vanilla HTML/CSS/JS (dark theme, responsive)
-- **Deployment**: Docker, Render
----
+- NLP: NLTK, SpaCy, TF-IDF (sklearn), Keras Tokenizer
+- Models: Logistic Regression, Gradient Boosting, BiLSTM (TensorFlow/Keras)
+- API: Flask
+- Frontend: Vanilla HTML/CSS/JS (dark theme, responsive)
+- Deployment: Docker, Render
