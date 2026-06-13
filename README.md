@@ -1,125 +1,141 @@
-# TruthLens - Fake News Detection System
+---
+# TruthLens — Fake News Detection System
 
-A production-grade NLP pipeline and web service for detecting fake news articles using Machine Learning and Deep Learning.
+![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-REST_API-000000?style=for-the-badge&logo=flask&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![NLTK](https://img.shields.io/badge/NLTK-NLP_Pipeline-154360?style=for-the-badge)
 
-## Features
-- **Comprehensive Preprocessing**: NLTK-based pipeline including URL stripping, lemmatization, and stopword removal.
-- **Multiple Models Supported**: Evaluates Logistic Regression, Gradient Boosting, and BiLSTM architectures.
-- **Automated Data Loading**: Automatically fetches a public Fake News dataset for seamless end-to-end training.
-- **REST API**: Flask-based API offering `/predict` and `/health` endpoints.
-- **Polished Web UI**: Dark-themed, responsive vanilla HTML/CSS/JS frontend interface for real-time inference.
+A production-grade NLP system that classifies news articles as FAKE or REAL using a multi-model pipeline — from classical TF-IDF baselines to BiLSTM deep learning — served via Flask REST API with a polished dark-themed web interface.
 
-## Prerequisites
-- Python 3.9+
-- Recommended: Virtual Environment
+---
 
-## Setup
+## What It Does
 
-1. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+Submit a headline or article text. Get back a verdict (FAKE/REAL) with a confidence score in real time.
 
-2. **Train the Models**
-   The system must train and export a model artifact before the API can serve predictions.
-   ```bash
-   python train/train.py
-   ```
-   *Note: This script will download the dataset to `data/`, preprocess it, extract TF-IDF features (up to 50,000 features), train three models (Logistic Regression, Gradient Boosting, BiLSTM), select the best one based on F1-score, and save it to the `models/` directory.*
+Under the hood: the system trains three models, selects the best by F1-score, and serves it via a REST endpoint. The entire pipeline — data loading, preprocessing, training, evaluation, and inference — is automated end-to-end.
 
-3. **Run the API Server**
-   ```bash
-   python run.py
-   ```
-   The application will be accessible at `http://localhost:5000`.
+---
 
-## Training Details & Output Calculation
+## Architecture
 
-### Training Process
-When running `train.py`:
-1. **Data Loading**: Loads the dataset (sampling 10,000 records for speed if the dataset is large).
-2. **Text Preprocessing**: Cleans the text by removing URLs, lemmatizing words, and removing standard English stopwords.
-3. **Feature Extraction**: Uses `TfidfVectorizer` with unigrams and bigrams (`ngram_range=(1,2)`) to extract numerical features for traditional ML models, and a `Tokenizer` + `pad_sequences` for the deep learning model.
-4. **Model Training**: 
-   - **Logistic Regression**: Trained on TF-IDF features.
-   - **Gradient Boosting**: Trained on TF-IDF features.
-   - **BiLSTM**: A bidirectional LSTM network trained on padded word sequences.
-5. **Evaluation & Selection**: All models are evaluated on a 20% holdout test set using the **F1-score**. The model with the highest F1-score is saved to `models/best_model.pkl` (or `.h5` for BiLSTM) along with its corresponding vectorizer/tokenizer.
-
-### Output Calculation
-When predicting whether a news article is fake or real via the API:
-1. The incoming text is passed through the same NLTK-based preprocessing pipeline.
-2. The saved `TfidfVectorizer` (or `Tokenizer`) transforms the cleaned text into numerical features.
-3. The selected best model calculates a probability score for the "Fake" class.
-4. If the probability score > 0.5, the text is classified as `FAKE`, otherwise `REAL`.
-5. The API returns the assigned label and the confidence (the raw probability score).
-
-## API Documentation
-
-### `GET /health`
-Verifies API status and model availability.
-**Response**:
-```json
-{
-  "status": "ok",
-  "model_loaded": true,
-  "model_name": "LogisticRegression"
-}
+```
+Raw Text
+   │
+   ▼
+NLTK Pipeline (URL strip → lowercase → lemmatize → stop word removal)
+   │
+   ├──► TF-IDF Vectorizer (50k features, unigrams + bigrams)
+   │         │
+   │         ├──► Logistic Regression
+   │         └──► Gradient Boosting
+   │
+   └──► Keras Tokenizer + pad_sequences
+             │
+             └──► BiLSTM (bidirectional LSTM)
+                      │
+                      ▼
+              Best Model (by F1) → Flask API → Web UI
 ```
 
-### `POST /predict`
-Classifies a block of text.
-**Headers**: `Content-Type: application/json`
-**Body**:
+---
+
+## Model Results
+
+| Model | F1-Score | Notes |
+|---|---|---|
+| Logistic Regression | Baseline | Fast, interpretable |
+| Gradient Boosting | Competitive | Ensemble on TF-IDF |
+| BiLSTM | Best (typically) | Deep sequential model |
+
+Best model is automatically selected and saved to `models/best_model.pkl` or `.h5`.
+
+---
+
+## Prediction Logic
+
+1. Text is cleaned via the same NLTK preprocessing pipeline used at training time
+2. The saved vectorizer/tokenizer transforms text to numerical features
+3. Model outputs a probability for the FAKE class
+4. If probability > 0.5 → FAKE, else → REAL
+5. API returns label + confidence score
+
+---
+
+## API
+
+**GET /health**
 ```json
-{
-  "text": "Your news article content here..."
-}
-```
-**Response**:
-```json
-{
-  "label": "FAKE",
-  "confidence": 0.9421,
-  "model_used": "LogisticRegression"
-}
+{ "status": "ok", "model_loaded": true, "model_name": "LogisticRegression" }
 ```
 
-## Running Tests
-Run the test suite using `pytest`:
+**POST /predict**
+```json
+// Request
+{ "text": "Your article text here..." }
+
+// Response
+{ "label": "FAKE", "confidence": 0.9421, "model_used": "LogisticRegression" }
+```
+
+---
+
+## Quickstart
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Train models (downloads dataset, trains all 3, saves best)
+python train/train.py
+
+# Run API server
+python run.py
+# → http://localhost:5000
+```
+
+**Docker:**
+```bash
+docker build -t fake-news-detector .
+docker run -p 5000:5000 fake-news-detector
+```
+
+**Deploy to Render:**
+Repository includes `render.yaml` for one-click Render deployment. Connect your GitHub repo → Render detects config automatically.
+
+---
+
+## Project Structure
+
+```
+Fakenews-Detection-using-AI/
+├── app/          # Flask application, UI templates, prediction logic
+├── train/        # Data fetching, model training, evaluation scripts
+├── models/       # Saved .pkl and .h5 model artifacts
+├── tests/        # pytest suite (unit + integration)
+├── data/         # Dataset storage
+├── Dockerfile
+├── render.yaml
+└── requirements.txt
+```
+
+---
+
+## Run Tests
+
 ```bash
 pytest tests/
 ```
 
-## Deployment (Render)
+---
 
-This application is ready to be deployed on platforms like **Render**, which supports heavy ML backend applications via Docker. 
+## Tech Stack
 
-**Vercel / Netlify Note**: While great for static sites or serverless functions, Vercel and Netlify have strict size limits for serverless functions (typically 50MB to 250MB). Because this application uses TensorFlow and scikit-learn, the dependencies exceed those limits. Render provides a seamless alternative for deploying Docker-based applications.
-
-### Deploying to Render
-1. Create a free account on [Render](https://render.com/).
-2. Click **New +** and select **Blueprint**.
-3. Connect your GitHub repository.
-4. Render will automatically detect the `render.yaml` file and configure a Web Service using the provided `Dockerfile`.
-5. Click **Apply** to deploy.
-
-*Note: The free tier may spin down after inactivity and take up to 50 seconds to spin back up on the next request.*
-
-### Deploying locally using Docker
-You can also run the application locally using Docker:
-```bash
-# Build the image
-docker build -t fake-news-detector .
-
-# Run the container
-docker run -p 5000:5000 fake-news-detector
-```
-
-## Project Structure
-- `app/`: Flask application, UI templates, and prediction logic.
-- `train/`: Scripts for data fetching, model training, and evaluation.
-- `models/`: Persistent storage for trained `.pkl` and `.h5` model artifacts.
-- `tests/`: Pytest suite for unit and integration testing.
-- `Dockerfile` & `render.yaml`: Configuration files for containerization and Render deployment.
-
+- **NLP**: NLTK, SpaCy, TF-IDF (sklearn), Keras Tokenizer
+- **Models**: Logistic Regression, Gradient Boosting, BiLSTM (TensorFlow/Keras)
+- **API**: Flask
+- **Frontend**: Vanilla HTML/CSS/JS (dark theme, responsive)
+- **Deployment**: Docker, Render
+---
